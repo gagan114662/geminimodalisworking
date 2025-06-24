@@ -16,7 +16,7 @@ const MathQuestion: React.FC = () => {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showResult, setShowResult] = useState(false);
 
-  const mathQuestions = useMemo(() => [
+  const mathQuestions = useMemo((): MathQuestionData[] => [
     {
       id: '1',
       question: 'What is 15 + 28?',

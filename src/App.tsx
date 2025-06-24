@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import "./App.scss";
 import { LiveAPIProvider } from "./contexts/LiveAPIContext";
 import SidePanel from "./components/side-panel/SidePanel";
@@ -23,6 +23,7 @@ import MathQuestion from "./components/math-question/MathQuestion";
 import ControlTray from "./components/control-tray/ControlTray";
 import cn from "classnames";
 import { LiveClientOptions } from "./types";
+import { useScreenCapture } from "./hooks/use-screen-capture";
 
 const API_KEY = process.env.REACT_APP_GEMINI_API_KEY as string;
 if (typeof API_KEY !== "string") {
@@ -39,6 +40,27 @@ function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   // either the screen capture, the video or null, if null we hide it
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [autoScreenStarted, setAutoScreenStarted] = useState(false);
+  const screenCapture = useScreenCapture();
+
+  // Auto-start screen capture when component mounts
+  useEffect(() => {
+    const autoStartScreenCapture = async () => {
+      try {
+        const stream = await screenCapture.start();
+        setVideoStream(stream);
+        setAutoScreenStarted(true);
+        console.log('Auto-started screen capture for Gemini visibility');
+      } catch (error) {
+        console.log('Auto screen capture failed (likely permissions):', error);
+        // Graceful fallback - user can manually enable
+      }
+    };
+
+    // Small delay to ensure app is fully loaded
+    const timer = setTimeout(autoStartScreenCapture, 1000);
+    return () => clearTimeout(timer);
+  }, [screenCapture]);
 
   return (
     <div className="App">
@@ -65,6 +87,8 @@ function App() {
               supportsVideo={true}
               onVideoStreamChange={setVideoStream}
               enableEditingSettings={true}
+              autoScreenStarted={autoScreenStarted}
+              screenCapture={screenCapture}
             >
               {/* put your own buttons here */}
             </ControlTray>

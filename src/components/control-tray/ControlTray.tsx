@@ -19,7 +19,6 @@ import cn from "classnames";
 import { memo, ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
-import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
@@ -32,6 +31,8 @@ export type ControlTrayProps = {
   supportsVideo: boolean;
   onVideoStreamChange?: (stream: MediaStream | null) => void;
   enableEditingSettings?: boolean;
+  autoScreenStarted?: boolean;
+  screenCapture?: UseMediaStreamResult;
 };
 
 type MediaStreamButtonProps = {
@@ -64,11 +65,20 @@ function ControlTray({
   onVideoStreamChange = () => {},
   supportsVideo,
   enableEditingSettings,
+  autoScreenStarted = false,
+  screenCapture: externalScreenCapture,
 }: ControlTrayProps) {
-  const videoStreams = [useWebcam(), useScreenCapture()];
+  const webcam = useWebcam();
+  const defaultScreenCapture: UseMediaStreamResult = { 
+    isStreaming: false, 
+    start: async () => { throw new Error('No screen capture provided'); }, 
+    stop: () => {}, 
+    stream: null, 
+    type: 'screen' as const
+  };
+  const screenCapture = externalScreenCapture || defaultScreenCapture;
   const [activeVideoStream, setActiveVideoStream] =
     useState<MediaStream | null>(null);
-  const [webcam, screenCapture] = videoStreams;
   const [inVolume, setInVolume] = useState(0);
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [muted, setMuted] = useState(false);
@@ -77,6 +87,13 @@ function ControlTray({
 
   const { client, connected, connect, disconnect, volume } =
     useLiveAPIContext();
+
+  // Set active video stream if auto-started screen sharing is active
+  useEffect(() => {
+    if (autoScreenStarted && screenCapture.stream && !activeVideoStream) {
+      setActiveVideoStream(screenCapture.stream);
+    }
+  }, [autoScreenStarted, screenCapture.stream, activeVideoStream]);
 
   useEffect(() => {
     if (!connected && connectButtonRef.current) {
@@ -156,7 +173,7 @@ function ControlTray({
       onVideoStreamChange(null);
     }
 
-    videoStreams.filter((msr) => msr !== next).forEach((msr) => msr.stop());
+    [webcam, screenCapture].filter((msr) => msr !== next).forEach((msr) => msr.stop());
   };
 
   return (
