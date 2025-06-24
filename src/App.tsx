@@ -21,6 +21,7 @@ import SidePanel from "./components/side-panel/SidePanel";
 import { Altair } from "./components/altair/Altair";
 import MathQuestion from "./components/math-question/MathQuestion";
 import ControlTray from "./components/control-tray/ControlTray";
+import ScreenPrompt from "./components/screen-prompt/ScreenPrompt";
 import cn from "classnames";
 import { LiveClientOptions } from "./types";
 import { useScreenCapture } from "./hooks/use-screen-capture";
@@ -40,27 +41,29 @@ function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   // either the screen capture, the video or null, if null we hide it
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const [autoScreenStarted, setAutoScreenStarted] = useState(false);
+  const [screenSharingEnabled, setScreenSharingEnabled] = useState(false);
+  const [showScreenPrompt, setShowScreenPrompt] = useState(true);
   const screenCapture = useScreenCapture();
 
-  // Auto-start screen capture when component mounts
-  useEffect(() => {
-    const autoStartScreenCapture = async () => {
-      try {
-        const stream = await screenCapture.start();
-        setVideoStream(stream);
-        setAutoScreenStarted(true);
-        console.log('Auto-started screen capture for Gemini visibility');
-      } catch (error) {
-        console.log('Auto screen capture failed (likely permissions):', error);
-        // Graceful fallback - user can manually enable
-      }
-    };
+  const enableScreenSharing = async () => {
+    try {
+      const stream = await screenCapture.start();
+      setVideoStream(stream);
+      setScreenSharingEnabled(true);
+      setShowScreenPrompt(false);
+      console.log('Screen sharing enabled for Gemini visibility');
+    } catch (error) {
+      console.log('Screen sharing cancelled or failed:', error);
+      setShowScreenPrompt(true);
+    }
+  };
 
-    // Small delay to ensure app is fully loaded
-    const timer = setTimeout(autoStartScreenCapture, 1000);
-    return () => clearTimeout(timer);
-  }, [screenCapture]);
+  // Auto-prompt for screen sharing when user first connects
+  useEffect(() => {
+    if (showScreenPrompt && !screenSharingEnabled) {
+      // Show prompt immediately when app loads
+    }
+  }, [showScreenPrompt, screenSharingEnabled]);
 
   return (
     <div className="App">
@@ -69,6 +72,14 @@ function App() {
           <SidePanel />
           <main>
             <div className="main-app-area">
+              {/* Screen sharing status banner */}
+              {screenSharingEnabled && (
+                <div className="screen-status-banner">
+                  <span className="material-symbols-outlined">visibility</span>
+                  Gemini can see your screen - Ready to help with math!
+                </div>
+              )}
+              
               {/* Math Question Component */}
               <MathQuestion />
               <Altair />
@@ -87,13 +98,21 @@ function App() {
               supportsVideo={true}
               onVideoStreamChange={setVideoStream}
               enableEditingSettings={true}
-              autoScreenStarted={autoScreenStarted}
+              screenSharingEnabled={screenSharingEnabled}
               screenCapture={screenCapture}
             >
               {/* put your own buttons here */}
             </ControlTray>
           </main>
         </div>
+        
+        {/* Screen sharing prompt modal */}
+        {showScreenPrompt && (
+          <ScreenPrompt
+            onEnableScreenSharing={enableScreenSharing}
+            onSkip={() => setShowScreenPrompt(false)}
+          />
+        )}
       </LiveAPIProvider>
     </div>
   );

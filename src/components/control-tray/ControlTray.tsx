@@ -31,7 +31,7 @@ export type ControlTrayProps = {
   supportsVideo: boolean;
   onVideoStreamChange?: (stream: MediaStream | null) => void;
   enableEditingSettings?: boolean;
-  autoScreenStarted?: boolean;
+  screenSharingEnabled?: boolean;
   screenCapture?: UseMediaStreamResult;
 };
 
@@ -65,7 +65,7 @@ function ControlTray({
   onVideoStreamChange = () => {},
   supportsVideo,
   enableEditingSettings,
-  autoScreenStarted = false,
+  screenSharingEnabled = false,
   screenCapture: externalScreenCapture,
 }: ControlTrayProps) {
   const webcam = useWebcam();
@@ -88,12 +88,12 @@ function ControlTray({
   const { client, connected, connect, disconnect, volume } =
     useLiveAPIContext();
 
-  // Set active video stream if auto-started screen sharing is active
+  // Set active video stream if screen sharing is enabled
   useEffect(() => {
-    if (autoScreenStarted && screenCapture.stream && !activeVideoStream) {
+    if (screenSharingEnabled && screenCapture.stream && !activeVideoStream) {
       setActiveVideoStream(screenCapture.stream);
     }
-  }, [autoScreenStarted, screenCapture.stream, activeVideoStream]);
+  }, [screenSharingEnabled, screenCapture.stream, activeVideoStream]);
 
   useEffect(() => {
     if (!connected && connectButtonRef.current) {
